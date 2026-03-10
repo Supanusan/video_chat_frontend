@@ -22,7 +22,14 @@
 
 # misc
 .DS_Store
+Thumbs.db
 *.pem
+
+# editor & IDE
+.idea/
+.vscode/
+*.swp
+*.swo
 
 # debug
 npm-debug.log*
@@ -39,3 +46,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+
+package-lock.json
