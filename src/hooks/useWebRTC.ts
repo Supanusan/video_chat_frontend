@@ -4,41 +4,38 @@ import { socketService } from '@/lib/socket';
 export type ConnectionState = 'idle' | 'searching' | 'connected' | 'error';
 
 // ICE servers for NAT traversal
-// ICE servers for NAT traversal
-const iceServers = {
+const iceServers: RTCConfiguration = {
   iceServers: [
     {
-      urls: "stun:stun.l.google.com:19302",
+      urls: 'stun:stun.l.google.com:19302',
     },
     {
-      urls: "turn:global.relay.metered.ca:443",
-      username: "853ae06f64723f4733c7269ebecaec24c039",
-      credential: "853ae06f64723f4733c7269ebecaec24c039",
+      urls: 'turn:global.relay.metered.ca:443',
+      username: '853ae06f64723f4733c7269ebecaec24c039',
+      credential: '853ae06f64723f4733c7269ebecaec24c039',
     },
     {
-      urls: "turns:global.relay.metered.ca:443?transport=tcp",
-      username: "853ae06f64723f4733c7269ebecaec24c039",
-      credential: "853ae06f64723f4733c7269ebecaec24c039",
+      urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+      username: '853ae06f64723f4733c7269ebecaec24c039',
+      credential: '853ae06f64723f4733c7269ebecaec24c039',
     },
   ],
+  iceCandidatePoolSize: 10,
 };
-
 
 export function useWebRTC() {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>('idle');
   const [roomId, setRoomId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<{ sender: 'me' | 'partner', text: string }[]>([]);
+  const [messages, setMessages] = useState<{ sender: 'me' | 'partner'; text: string }[]>([]);
   const [onlineCount, setOnlineCount] = useState(0);
   const [queueCount, setQueueCount] = useState(0);
   const [isPartnerTyping, setIsPartnerTyping] = useState(false);
 
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const socketRef = useRef(socketService.getSocket());
-  // Keep a ref to roomId for use in closures (socket event handlers)
   const roomIdRef = useRef<string | null>(null);
-  // Keep connectionState in a ref so socket listeners don't get stale closures
   const connectionStateRef = useRef<ConnectionState>('idle');
 
   // Sync refs with state
@@ -70,7 +67,6 @@ export function useWebRTC() {
 
   const cleanupRTC = useCallback(() => {
     if (peerConnectionRef.current) {
-      // Nullify listeners first to prevent circular triggers
       peerConnectionRef.current.onconnectionstatechange = null;
       peerConnectionRef.current.onicecandidate = null;
       peerConnectionRef.current.ontrack = null;
@@ -83,7 +79,6 @@ export function useWebRTC() {
   }, []);
 
   const setupPeerConnection = useCallback((room: string, stream: MediaStream | null) => {
-    // Clean up any existing peer connection first
     if (peerConnectionRef.current) {
       peerConnectionRef.current.onconnectionstatechange = null;
       peerConnectionRef.current.onicecandidate = null;
@@ -117,16 +112,20 @@ export function useWebRTC() {
       }
     };
 
-    // Handle connection drops
+    // Handle connection state changes
     pc.onconnectionstatechange = () => {
       const state = pc.connectionState;
       console.log('WebRTC Connection State:', state);
-      // Only auto-rejoin on definitive failure, NOT transient 'disconnected'
+
+      if (state === 'disconnected') {
+        // Try ICE restart before giving up
+        pc.restartIce();
+      }
+
       if (state === 'failed' || state === 'closed') {
         console.log('WebRTC connection failed/closed - re-queuing.');
         cleanupRTC();
         setConnectionState('idle');
-        // Small delay then rejoin queue
         setTimeout(() => {
           if (connectionStateRef.current === 'idle') {
             setConnectionState('searching');
@@ -142,7 +141,6 @@ export function useWebRTC() {
   // ─── 3. Queue & Navigation ─────────────────────────────────────────────────
 
   const startSearch = useCallback(() => {
-    // Don't join queue if already searching or connected
     if (connectionStateRef.current === 'searching' || connectionStateRef.current === 'connected') {
       return;
     }
@@ -157,10 +155,8 @@ export function useWebRTC() {
     };
 
     if (socket.connected) {
-      // Already connected — emit right away
       emitJoinQueue();
     } else {
-      // Wait for connection to establish before joining queue
       socket.once('connect', emitJoinQueue);
       socket.connect();
     }
@@ -184,7 +180,6 @@ export function useWebRTC() {
     if (currentRoom) {
       socketRef.current.emit('next', { roomId: currentRoom });
     }
-    // Capture stream before cleanup
     setLocalStream(prev => {
       stopLocalStream(prev);
       return null;
@@ -212,7 +207,6 @@ export function useWebRTC() {
 
   // ─── 5. Socket Event Listeners ─────────────────────────────────────────────
 
-  // Keep a ref to localStream so socket listeners can access the latest value
   const localStreamRef = useRef<MediaStream | null>(null);
   useEffect(() => { localStreamRef.current = localStream; }, [localStream]);
 
@@ -222,7 +216,11 @@ export function useWebRTC() {
     const onMatchFound = async ({
       roomId: room,
       isInitiator,
-    }: { partnerId: string; roomId: string; isInitiator: boolean }) => {
+    }: {
+      partnerId: string;
+      roomId: string;
+      isInitiator: boolean;
+    }) => {
       console.log(`Match found! Room: ${room}, Initiator: ${isInitiator}`);
 
       const pc = setupPeerConnection(room, localStreamRef.current);
@@ -277,7 +275,6 @@ export function useWebRTC() {
       console.log('Peer disconnected cleanly');
       cleanupRTC();
       setConnectionState('idle');
-      // Brief delay to allow cleanup then rejoin
       setTimeout(() => {
         setConnectionState('searching');
         socketRef.current.emit('join-queue');
@@ -288,14 +285,19 @@ export function useWebRTC() {
       setMessages(prev => [...prev, { sender: 'partner', text }]);
     };
 
-    const onStats = ({ onlineCount, queueCount }: { onlineCount: number; queueCount: number }) => {
+    const onStats = ({
+      onlineCount,
+      queueCount,
+    }: {
+      onlineCount: number;
+      queueCount: number;
+    }) => {
       setOnlineCount(onlineCount);
       setQueueCount(queueCount);
     };
 
     const onTyping = ({ isTyping }: { isTyping: boolean }) => {
       setIsPartnerTyping(isTyping);
-      // Clear typing indicator after 3 seconds of inactivity
       if (isTyping) {
         setTimeout(() => setIsPartnerTyping(false), 3000);
       }
