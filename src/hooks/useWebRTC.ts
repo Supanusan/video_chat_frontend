@@ -8,17 +8,7 @@ export type ConnectionState = 'idle' | 'searching' | 'connected' | 'error';
 const iceServers = {
   iceServers: [
     {
-      urls: "stun:stun.relay.metered.ca:80",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:80",
-      username: "853ae06f64723f4733c7269ebecaec24c039",
-      credential: "853ae06f64723f4733c7269ebecaec24c039",
-    },
-    {
-      urls: "turn:global.relay.metered.ca:80?transport=tcp",
-      username: "853ae06f64723f4733c7269ebecaec24c039",
-      credential: "853ae06f64723f4733c7269ebecaec24c039",
+      urls: "stun:stun.l.google.com:19302",
     },
     {
       urls: "turn:global.relay.metered.ca:443",
