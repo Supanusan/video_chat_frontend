@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 
-const URL = process.env.NEXT_PUBLIC_SOCKET_URL || "https://video-chat-backend-eta.vercel.app" || 'http://localhost:3001';
-
+// ✅ Fixed
+const URL = process.env.NEXT_PUBLIC_SOCKET_URL || "https://videochatbackend-production.up.railway.app";
 class SocketService {
   private socket: Socket | null = null;
 
