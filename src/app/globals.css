@@ -7,6 +7,10 @@
   --color-brand-600: #2563eb;
   --color-brand-900: #1e3a8a;
   
+  --color-accent-pink: #f472b6;
+  --color-accent-purple: #a855f7;
+  --color-accent-cyan: #22d3ee;
+
   --color-dark-900: #0f172a;
   --color-dark-800: #1e293b;
   --color-dark-700: #334155;
@@ -21,14 +25,35 @@
 
 body {
   background-color: var(--background);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(168, 85, 247, 0.15) 0px, transparent 50%);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
+  min-height: 100vh;
 }
 
 .glass-panel {
-  background: rgba(30, 41, 59, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(30, 41, 59, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.video-glow {
+  box-shadow: 0 0 40px -10px rgba(59, 130, 246, 0.5);
+}
+
+.btn-primary {
+  @apply bg-gradient-to-r from-brand-500 to-accent-purple text-white font-bold py-4 px-8 rounded-2xl shadow-lg hover:shadow-brand-500/30 hover:scale-105 active:scale-95 transition-all duration-200 flex items-center justify-center gap-2;
+}
+
+.btn-secondary {
+  @apply bg-white/10 hover:bg-white/20 text-white font-semibold py-4 px-8 rounded-2xl border border-white/10 transition-all duration-200 flex items-center justify-center gap-2;
+}
+
+.btn-danger {
+  @apply bg-red-500/10 hover:bg-red-500/20 text-red-400 font-semibold py-4 px-8 rounded-2xl border border-red-500/20 transition-all duration-200 flex items-center justify-center gap-2;
 }
